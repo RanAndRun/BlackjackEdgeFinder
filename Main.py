@@ -1,6 +1,27 @@
 from Card import Card
 from Deck import Deck
 
+def find_count_and_is_soft(cards_list : list[Card]):
+    count = 0
+    got_an_ace = False
+    for card in cards_list:
+        if 2 <= card.num <= 10:
+            count += card.num
+        elif card.num > 10:
+            count += 10
+        else:
+            # ace
+            if count <= 10:
+                got_an_ace = True
+                count += 11
+            else:
+                count += 1
+        if got_an_ace and count > 21:
+            count -= 10
+            got_an_ace = False
+    
+    return count, got_an_ace
+
 def find_count(cards_list : list[Card]):
     count = 0
     got_an_ace = False
@@ -46,16 +67,16 @@ def getMove(players_hand : list, dealer_face_card: int ):
 
 
     blackjack_strategy_soft = [
-    # Dealer's upcard: 2   3   4   5   6   7   8   9  10   A
-    ['H', 'H', 'H', 'H', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,2
-    ['H', 'H', 'H', 'H', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,3
-    ['H', 'H', 'H', 'D', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,4
-    ['H', 'H', 'H', 'D', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,5
-    ['H', 'H', 'D', 'D', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,6
-    ['H', 'DS', 'DS', 'DS', 'DS', 'S', 'H', 'H', 'S', 'S'],  # Player's total: A,7
-    ['S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S'],  # Player's total: A,8
-    ['S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S']   # Player's total: A,9
-]   
+        # Dealer's upcard: 2   3   4   5   6   7   8   9  10   A
+        ['H', 'H', 'H', 'H', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,2
+        ['H', 'H', 'H', 'H', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,3
+        ['H', 'H', 'H', 'D', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,4
+        ['H', 'H', 'H', 'D', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,5
+        ['H', 'H', 'D', 'D', 'D', 'D', 'H', 'H', 'H', 'H'],  # Player's total: A,6
+        ['H', 'DS', 'DS', 'DS', 'DS', 'S', 'H', 'H', 'S', 'S'],  # Player's total: A,7
+        ['S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S'],  # Player's total: A,8
+        ['S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S']   # Player's total: A,9
+    ]   
     blackjack_strategy_splitable = [
         # Dealer's upcard: 2   3   4   5   6   7   8   9  10  A
         ['H', 'H', 'SP', 'SP', 'SP', 'SP', 'H', 'H', 'H', 'H'],  # Player's total: 2,2
@@ -76,19 +97,33 @@ def getMove(players_hand : list, dealer_face_card: int ):
         card1 = players_hand[0]
         card2 = players_hand[1]
         value = find_count(players_hand)
-
+        if value >= 21:
+            return
+        
         if(card1.num == 1 or card2.num == 1):
             #soft
-            return blackjack_strategy_soft[value - 11][dealer_face_card.get_value_of_card() - 1]
-        if(card1.num == card2.num):
+            return blackjack_strategy_soft[value - 13][dealer_face_card.get_value_of_card() - 2]
+        elif(card1.num == card2.num):
             #splitable
-            print("aaaaaaa", card1.num - 1, dealer_face_card.get_value_of_card() - 1)
-            return blackjack_strategy_splitable[(card1.get_value_of_card()) - 2][dealer_face_card.get_value_of_card() - 1]
+            return blackjack_strategy_splitable[(card1.get_value_of_card()) - 2][dealer_face_card.get_value_of_card() - 2]
         else:
             if(value >= 17): return 'S'
             if(value <= 7): return 'H'
-            print("ggggg", value - 7, dealer_face_card.get_value_of_card() - 1)
-            return blackjack_strategy_hard[value - 7][dealer_face_card.get_value_of_card() - 1]
+            return blackjack_strategy_hard[value - 7][dealer_face_card.get_value_of_card() - 2]
+    else:
+        value, is_soft = find_count_and_is_soft(players_hand)
+        if value >= 21:
+            return
+        if(is_soft):
+            return blackjack_strategy_soft[value - 13][dealer_face_card.get_value_of_card() - 2]
+        else:
+            if(value >= 17): return 'S'
+            if(value <= 7): return 'H'
+            strategy = blackjack_strategy_hard[value - 7][dealer_face_card.get_value_of_card() - 2]
+            return "H" if strategy == 'D' else strategy
+
+
+        
 
 def turn_handler(players_hands : list, deck : Deck, players_money: int, money_put_in_hand: int, dealers_face_card):
     curr_hand_index = 0
@@ -97,18 +132,17 @@ def turn_handler(players_hands : list, deck : Deck, players_money: int, money_pu
         if(find_count(players_hands[curr_hand_index]) > 21):
             curr_hand_index += 1
             continue
-        print("make an action")
-        print("best move is", getMove(players_hands[curr_hand_index], dealers_face_card))
-        action = input()
-        if action == 'h':
+        best_move = getMove(players_hands[curr_hand_index], dealers_face_card)
+        action = best_move
+        if action == 'H':
             split_allowed = False
             players_hands[curr_hand_index].append(deck.pop_card())
             print(players_hands[curr_hand_index][-1])
             print(find_count(players_hands[curr_hand_index]))
-        elif action == 's':
+        elif action == 'S':
             print(f"Stayed on {find_count(players_hands[curr_hand_index])}")
             curr_hand_index +=1
-        elif action == "d" and is_double_possible(players_hands[curr_hand_index]):
+        elif action == "D"  and is_double_possible(players_hands[curr_hand_index]) or action == "DS" and is_double_possible(players_hands[curr_hand_index]):
             print("Double")
             players_money -= money_put_in_hand
             money_put_in_hand *= 2
@@ -116,15 +150,27 @@ def turn_handler(players_hands : list, deck : Deck, players_money: int, money_pu
             print(players_hands[-1])
             print(find_count(players_hands[curr_hand_index]))
             curr_hand_index +=1
-        elif action == "ss" and is_split_possible(players_hands[curr_hand_index]) and money_put_in_hand <= players_money:
+        elif action == "SP" and is_split_possible(players_hands[curr_hand_index]) and money_put_in_hand <= players_money:
             players_money -= money_put_in_hand
             players_hands.append([players_hands[curr_hand_index].pop()])
             players_hands[curr_hand_index].append(deck.pop_card())
             players_hands[-1].append(deck.pop_card())
-
             print(players_hands)
+        else:
+            print(f"Stayed on {find_count(players_hands[curr_hand_index])}")
+            curr_hand_index +=1
+
+
 
     return players_money
+
+def blackjack_handler(hand):
+    card1 = hand[0].get_value_of_card()
+    card2 = hand[1].get_value_of_card()
+
+    return card1 == 11 and card2 == 10 or card1 == 10 and card2 == 11
+
+    
 
 
 class Main:
@@ -144,12 +190,13 @@ class Main:
             cards.append(temp)
 
 
-    players_money = 1000
+    players_money = 100000000
     gameOn = True
-    while True:
+    counter = 0
+    while players_money > 0 and counter < 10000000:
         while True:
-            print("player has ", players_money)
-            money_put_in_hand = int(input("how much money on hand"))
+            # money_put_in_hand = int(input("how much money on hand"))
+            money_put_in_hand = 10
             if(money_put_in_hand <= players_money):
                 players_money -= money_put_in_hand
                 break
@@ -178,32 +225,48 @@ class Main:
             print(dealer_cards[0], "|")
             print(dealer_cards[0].get_value_of_card())
 
-            #players turn
-            players_money = turn_handler(players_hands, deck, players_money, money_put_in_hand, dealer_cards[0])
+            if(blackjack_handler(dealer_cards) and blackjack_handler(players_hands[0])):
+                #blackjack push
+                print("push")
+                players_money += money_put_in_hand
 
-            for hand in players_hands:
-                if find_count(hand) > 21:
-                    # player busted
-                    print("player busted")
-                else:
-                    print("dealer has", dealer_cards[0], "|", dealer_cards[1], "\nCount is", find_count(dealer_cards))
-                    while(find_count(dealer_cards) < 17):
-                        dealer_cards.append(deck.pop_card())
-                        print(dealer_cards[-1])
-                        print(find_count(dealer_cards))
-                    if find_count(dealer_cards) > 21 or find_count(dealer_cards) < find_count(hand):
-                        print("player won")
-                        players_money += money_put_in_hand * 2
-                    elif find_count(dealer_cards) > find_count(hand):
-                        print("dealer won")
-                    else:
-                        print("push")
-                        players_money += money_put_in_hand
+            elif blackjack_handler(dealer_cards):
+                # dealer got blackjack
+                print("Dealer Won")
                 
-                print("player has ", players_money)
+            elif blackjack_handler(players_hands[0]):
+                # player got blackjack
+                print("BLACKJACK")
+                players_money += money_put_in_hand * 1.5
+
+            else:
+                #players turn
+                players_money = turn_handler(players_hands, deck, players_money, money_put_in_hand, dealer_cards[0])
+
+                for hand in players_hands:
+                    if find_count(hand) > 21:
+                        # player busted
+                        print("player busted")
+                    else:
+                        print("dealer has", dealer_cards[0], "|", dealer_cards[1], "\nCount is", find_count(dealer_cards))
+                        while(find_count(dealer_cards) < 17):
+                            dealer_cards.append(deck.pop_card())
+                            print(dealer_cards[-1])
+                            print(find_count(dealer_cards))
+                        if find_count(dealer_cards) > 21 or find_count(dealer_cards) < find_count(hand):
+                            print("player won")
+                            players_money += money_put_in_hand * 2
+                        elif find_count(dealer_cards) > find_count(hand):
+                            print("dealer won")
+                        else:
+                            print("push")
+                            players_money += money_put_in_hand
+                
+                print("player has ", players_money, "\n\n\n\n")
 
 
                 gameOn = False
+        counter+=1
 
 
         
